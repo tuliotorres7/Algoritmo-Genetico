@@ -7,11 +7,11 @@ import math
 from geneticalgorithm import geneticalgorithm as ga
 from sklearn.metrics import mean_squared_error
 
-days =113
-n = 500
+days = 30
+n = 50000
 beta = 0.3
 gamma = 0.3
-g = nx.erdos_renyi_graph(n, 0.1)
+g = nx.erdos_renyi_graph(n, 0.001)
 a = int()
 
 
@@ -23,13 +23,13 @@ SIRModel = ep.SIRModel(g)
 cfg = mc.Configuration()
 cfg.add_model_parameter('beta', 0.3)
 cfg.add_model_parameter('gamma',0.05)
-cfg.add_model_parameter("fraction_infected", 0.03)
+cfg.add_model_parameter("fraction_infected", 0.008)
 SIRModel.set_initial_status(cfg)
 
 
 
 # Ready CSV
-arq = open("casos_sj.csv")
+arq = open("casos_sj2.csv")
 sirSjCsv = csv.DictReader(arq,fieldnames = ["S","R","I"])
 
 matriz_gerada = np.zeros((days,3), dtype = np.int)
@@ -48,10 +48,8 @@ for row in sirSjCsv:
     sirR.append(int(row['R']))
     i+=1
 
-#print(sirSj)
-data = sirSj
 
-#print(data[0]['I'])
+data = sirSj
 
 varbound=np.array([[0,1]]*2)
 
@@ -60,7 +58,7 @@ def fitness(x):
 
     cfg.add_model_parameter('beta', x[0])
     cfg.add_model_parameter('gamma', x[1])
-    cfg.add_model_parameter("fraction_infected", 0.03)
+    cfg.add_model_parameter("fraction_infected", 0.08)
     SIRModel.set_initial_status(cfg)
     iterations = SIRModel.iteration_bunch(days)
     print(iterations)
@@ -94,8 +92,12 @@ algorithm_param = {'max_num_iteration': 100,\
                    'crossover_probability': 0.8,\
                    'parents_portion': 0.1,\
                    'crossover_type':'uniform',\
-                   'max_iteration_without_improv': 20}
+                   'max_iteration_without_improv': 25}
 
-GaModel= ga(function= fitness,dimension=2,variable_type='real',variable_boundaries=varbound, algorithm_parameters= algorithm_param)
+GaModel= ga(function= fitness,dimension=2,variable_type='real',variable_boundaries=varbound, algorithm_parameters= algorithm_param,function_timeout= 20)
 
-GaModel.run()
+gs = GaModel.run()
+
+print(GaModel)
+print(gs)
+
