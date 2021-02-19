@@ -1,103 +1,153 @@
-import networkx as nx
-import ndlib.models.ModelConfig as mc
-import ndlib.models.epidemics as ep
-import csv
-import numpy as np
+import random
 import math
-from geneticalgorithm import geneticalgorithm as ga
-from sklearn.metrics import mean_squared_error
+import numpy as np
+from funcao_AG import func_obj
+import matplotlib.pyplot as plt
+from statistics import mean
+#from matplotlib import pyplot as plt
 
-days = 30
-n = 50000
-beta = 0.3
-gamma = 0.3
-g = nx.erdos_renyi_graph(n, 0.001)
-a = int()
+nPop = 30
+nGer = 30
+taxaCruza = 1
+taxaMuta = 0.1
+nBits = 20
+maxNum = 1
+minNum = -1 
+dimensao = 2
+populacao = []
+pais=[]
+nElitismo = []
+vetMin = []
+vetMax = []
+vetIndexMin = []
 
-
-
-
-# Model selection
-SIRModel = ep.SIRModel(g)
-# Model Configuration
-cfg = mc.Configuration()
-cfg.add_model_parameter('beta', 0.3)
-cfg.add_model_parameter('gamma',0.05)
-cfg.add_model_parameter("fraction_infected", 0.008)
-SIRModel.set_initial_status(cfg)
-
-
-
-# Ready CSV
-arq = open("casos_sj2.csv")
-sirSjCsv = csv.DictReader(arq,fieldnames = ["S","R","I"])
-
-matriz_gerada = np.zeros((days,3), dtype = np.int)
-sirSj = list()
-sirS = list()
-sirI = list()
-sirR = list()
-Igerado = list()
-Rgerado = list()
-i = 0
-
-for row in sirSjCsv:
-    sirSj.insert(i, { "S": int(row['S']), "I": int(row['I']), "R" : int(row['R'])})
-    sirS.append(int(row['S']))
-    sirI.append(int(row['I']))
-    sirR.append(int(row['R']))
-    i+=1
+class individuo:
+    def __init__(self,x,nBits,dimensao):
+        self.x = []
+        self.x = x
+        self.nBits = nBits 
+        self.ndim = [dimensao]
 
 
-data = sirSj
+def criaPopulacaoInicial(nPop,populacao,nBits):
+    for i in range(nPop):
+        ind = individuo(0,nBits,2)
+        ind.x = []
+        for k in range(nBits*2):
+            ind.x.append(random.randint(0,1))    
+        populacao.append(ind)
+    #populacao[len(populacao)-1].x = [1,1,1,0,0,0,1,1,1,0,0,0]
+    return populacao
 
-varbound=np.array([[0,1]]*2)
+def avaliaFitness(minNum,maxNum,nBits,populacao):
+    vetorParametros = []
+    fit = []
+    aux = []
+    a = str()
+    for ind in populacao:
+        #a = str(ind.x[0:nBits]).strip('[]')
+        #print(a)
+        a= "".join(map(str,ind.x[0:nBits]))
+        dec = int(a,2)
+        aux.append((minNum)+(((maxNum - minNum)/((2.0**nBits)-1))*dec))
+        a=  "".join(map(str,ind.x[nBits:nBits*2]))
+        dec = int(a,2)
+        aux.append((minNum)+(((maxNum - minNum)/((2.0**nBits)-1))*dec))
+        vetorParametros.append(aux)
+        aux = []
+    for x in vetorParametros:
+        fit.append(func_obj(x))
+    return fit
 
-def fitness(x):
-    SIRModel.reset()
+def torneio(nPop,fit,populacao):
+    vpais= []
+    pv = 0.9
+    i = 0
+    vencedor = 0
+    while( i < nPop ):
+        p1 = random.randint(0,nPop-1)
+        p2 = random.randint(0,nPop-1)
+        while(p1==p2):
+            p2 = random.randint(0,nPop-1)
+        r = random.randint(0,1)
+        if(fit[p2]>fit[p1]):
+            vencedor = p1
+            if(r>pv):
+                vencedor = p2
+        else:
+            vencedor = p2
+        if(r>pv):
+            vencedor = p1
+        vpais.append(populacao[vencedor])
+        i=i + 1
+    return vpais
+def cruzamento(pais,populacao,taxaCuzamento,dimensao,nBits):
+    i = 0
+    novaPopulacao = []
+    while(i<len(populacao)):
+        rand = random.random()
+        corte = random.randint(1,nBits*dimensao-1)
+        if rand < taxaCuzamento:
+            filho1 = pais[i].x[0:corte] + pais[i+1].x[corte:nBits*2]
+            filho2 = pais[i+1].x[0:corte] + pais[i].x[corte:nBits*2]
+            novaPopulacao.append(individuo(filho1,nBits,dimensao))
+            novaPopulacao.append(individuo(filho2,nBits,dimensao))
+            i= i + 2
+        else:
+            novaPopulacao.append(populacao[i])
+            i=i+1
+    return novaPopulacao
 
-    cfg.add_model_parameter('beta', x[0])
-    cfg.add_model_parameter('gamma', x[1])
-    cfg.add_model_parameter("fraction_infected", 0.08)
-    SIRModel.set_initial_status(cfg)
-    iterations = SIRModel.iteration_bunch(days)
-    print(iterations)
-    a = 0
-    Igerado.clear()
-    Rgerado.clear()
-    for v in iterations:
-        matriz_gerada[a][0] = v['node_count'][0]
-        matriz_gerada[a][1] = v['node_count'][1]
-        matriz_gerada[a][2] = v['node_count'][2]
-        Igerado.append(v['node_count'][1])
-        Rgerado.append(v['node_count'][2])
-        a = a + 1
-  
-    #print(matriz_gerada)
-    #print(Igerado)
-    print(iterations)
+def mutacao(populacao,taxaMutacao,dimensao,nBits):
+    for ind in populacao:
+        for j in range(0,nBits*dimensao-1):
+            rand = random.random()
+            if rand < taxaMutacao:
+                if ind.x[j] == 1:
+                    ind.x[j] = 0
+                else:
+                    ind.x[j] = 1  
+    return populacao
 
-    mseI = mean_squared_error(sirI, Igerado)
-    mseR = mean_squared_error(sirR, Rgerado)
-    rmseI = math.sqrt(mseI)
-    rmseR = math.sqrt(mseR)
-    f = (rmseI + rmseR) / 2    
-    return f
+def elitismo(populacaoMutada,populacao,vetFitness):
+    novaPopulacao = populacaoMutada
+    #o Melhor fitnes que permanece, nao os melhores
+    novaPopulacao[10] = populacao[melhorFitness(vetFitness)]
+    return novaPopulacao
 
 
-algorithm_param = {'max_num_iteration': 100,\
-                   'population_size':100,\
-                   'mutation_probability':0.05,\
-                   'elit_ratio': 0.01,\
-                   'crossover_probability': 0.8,\
-                   'parents_portion': 0.1,\
-                   'crossover_type':'uniform',\
-                   'max_iteration_without_improv': 25}
+def melhorFitness(vFitness):
+    menor = 99999
+    iMenor = 0
+    for i in range(len(vFitness)):
+        if vFitness[i] < menor:
+            menor = vFitness[i]
+            iMenor = i
+    return iMenor
 
-GaModel= ga(function= fitness,dimension=2,variable_type='real',variable_boundaries=varbound, algorithm_parameters= algorithm_param,function_timeout= 20)
+    
 
-gs = GaModel.run()
-
-print(GaModel)
-print(gs)
-
+populacao = criaPopulacaoInicial(nPop,populacao,nBits)
+g=0
+while(g<nGer):
+    fitness = avaliaFitness(minNum,maxNum,nBits,populacao)
+    pais = torneio(nPop,fitness,populacao)
+    populacaoCruzada = cruzamento(pais,populacao,taxaCruza,dimensao,nBits)
+    populacaoMutada = mutacao(populacaoCruzada,taxaMuta,dimensao,nBits)
+    populacaoFinal = elitismo(populacaoMutada,populacao, fitness)
+    populacao = populacaoFinal
+    vetMin.append(min(fitness))
+    vetMax.append(max(fitness))
+    #vetIndexMin.append(index(min(fitness)))
+    g=g+1
+aux = []
+for x in range(1,nGer+1):
+    aux.append(x)
+plt.plot(vetMin)
+plt.plot(vetMax)
+res = [mean(values) for values in zip(vetMin,vetMax)]
+plt.plot(res)
+plt.title("Max, Min , Média por Geração")
+plt.show()
+#print(populacao)
+     
