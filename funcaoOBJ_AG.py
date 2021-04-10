@@ -7,7 +7,7 @@ import ndlib.models.epidemics as ep
 import csv
 from sklearn.metrics import mean_squared_error
 
-def func_obj(x):
+def func_obj(x,g):
 	days = 30
 	sirSj = list()
 	sirS = list()
@@ -17,8 +17,8 @@ def func_obj(x):
 	Rgerado = list()
 	# Ready CSV
 	arq = open("casos_sj2.csv")
-	sirSjCsv = csv.DictReader(arq,fieldnames = ["S","R","I"])
-	g = nx.erdos_renyi_graph(n, 0.001)
+	sirSjCsv = csv.DictReader(arq,fieldnames = ["S","I","R"])
+
 	i=0
 	for row in sirSjCsv:
 		sirSj.insert(i, { "S": int(row['S']), "I": int(row['I']), "R" : int(row['R'])})
@@ -43,7 +43,7 @@ def func_obj(x):
 	cfg.add_model_parameter("fraction_infected", 0.08)
 	SIRModel.set_initial_status(cfg)
 	iterations = SIRModel.iteration_bunch(days)
-	print(iterations)
+	#print(iterations)
 	a = 0
 	Igerado.clear()
 	Rgerado.clear()

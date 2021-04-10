@@ -1,6 +1,5 @@
 import random
 import math
-import numpy as np
 from funcaoOBJ_AG import func_obj
 import matplotlib.pyplot as plt
 from statistics import mean
@@ -9,7 +8,6 @@ import ndlib.models.ModelConfig as mc
 import ndlib.models.epidemics as ep
 import csv
 import numpy as np
-import math
 from sklearn.metrics import mean_squared_error
 #from matplotlib import pyplot as plt
 
@@ -19,7 +17,7 @@ taxaCruza = 1
 taxaMuta = 0.1
 nBits = 6
 maxNum = 1
-minNum = -1 
+minNum = 0 
 dimensao = 2
 populacao = []
 pais=[]
@@ -27,6 +25,8 @@ nElitismo = []
 vetMin = []
 vetMax = []
 vetIndexMin = []
+n= 10000
+g = nx.erdos_renyi_graph(n, 0.001)
 
 class individuo:
     def __init__(self,x,nBits,dimensao):
@@ -62,12 +62,12 @@ def avaliaFitness(minNum,maxNum,nBits,populacao):
         aux = []
 
     for x in vetorParametros:
-        fit.append(func_obj(x))
+        fit.append(func_obj(x,g))
     return fit
 
 def torneio(nPop,fit,populacao):
     vpais= []
-    pv = 0.9
+    pv = 0.9#pior vence
     i = 0
     vencedor = 0
     while( i < nPop ):
@@ -147,13 +147,15 @@ while(g<nGer):
     #vetIndexMin.append(index(min(fitness)))
     g=g+1
 aux = []
+
 for x in range(1,nGer+1):
     aux.append(x)
+print(populacao)
+
 plt.plot(vetMin)
 plt.plot(vetMax)
 res = [mean(values) for values in zip(vetMin,vetMax)]
 plt.plot(res)
 plt.title("Max, Min , Média por Geração")
 plt.show()
-#print(populacao)
      
